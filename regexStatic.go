@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/samber/lo"
 )
@@ -3106,14 +3107,8 @@ var conceptNameList = []string{
 	"non-Hodgkin's lymphoma",
 }
 
-type matchObj struct {
-	lineIdx    int
-	match      string
-	start, end int
-}
-
-func populate() string {
-	conceptNameArr := lo.Uniq[string](conceptNameList)
+func createRegex(arr []string) *regexp.Regexp {
+	conceptNameArr := lo.Uniq[string](arr)
 	// build expression of all concept names
 	expression := "(?i)\\b("
 	for i, name := range conceptNameArr {
@@ -3124,25 +3119,29 @@ func populate() string {
 	}
 	expression = expression + ")\\b"
 	r := regexp.MustCompile(expression)
+	return r
+}
 
-	lines := strings.Split(md, "\n")
+type matchObj struct {
+	lineIdx    int
+	match      string
+	start, end int
+}
+
+func populate(r *regexp.Regexp, str string) string {
+	lines := strings.Split(str, "\n")
 	allMatches := make([]matchObj, 0)
 
+	var wg sync.WaitGroup
+
 	for i, line := range lines {
-		if line == "" || line[0] == '#' || strings.Contains(line, "http") {
-			continue
-		}
-		indexMatches := r.FindAllStringIndex(line, -1)
-		for _, index := range indexMatches {
-			start := index[0]
-			end := index[1]
-			tmp := matchObj{i, line[start:end], start, end}
-			allMatches = append(allMatches, tmp)
-		}
+		wg.Add(1)
+		go findLineMatches(&wg, r, i, line, &allMatches)
 	}
+	wg.Wait()
 	// fmt.Printf("%+v\n", allMatches)
 	if len(allMatches) == 0 {
-		return md
+		return str
 	}
 	matchIdx := 0
 	lineIdx := allMatches[matchIdx].lineIdx
@@ -3166,7 +3165,22 @@ func populate() string {
 	return strings.Join(newLines, "\n")
 }
 
+func findLineMatches(wg *sync.WaitGroup, r *regexp.Regexp, lineIdx int, line string, matchesList *[]matchObj) {
+	defer wg.Done()
+	if line == "" || line[0] == '#' || strings.Contains(line, "http") {
+		return
+	}
+	indexMatches := r.FindAllStringIndex(line, -1)
+	for _, index := range indexMatches {
+		start := index[0]
+		end := index[1]
+		tmp := matchObj{lineIdx, line[start:end], start, end}
+		*matchesList = append(*matchesList, tmp)
+	}
+}
+
 func main() {
-	res := populate()
+	r := createRegex(conceptNameList)
+	res := populate(r, md)
 	fmt.Println(res)
 }

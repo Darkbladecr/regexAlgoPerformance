@@ -2,7 +2,9 @@
 
 We are looking at ~3000 key phrases to replace within explanation texts.
 
-Using Benchmark.js
+## Javascript
+
+Using [Benchmark.js](https://github.com/bestiejs/benchmark.js)
 
 ```text
 regexWildcard x 97.62 ops/sec ±0.52% (77 runs sampled)
@@ -111,4 +113,30 @@ running (10.0s), 0/1 VUs, 278 complete and 0 interrupted iterations
 
 
 running (10.0s), 0/1 VUs, 3291 complete and 0 interrupted iterations
+```
+
+## Golang
+
+Rewriting the fastest script from javascript into golang gives a lot of potential benefits by using concurrency.
+
+A simple writeup of the function into Go leads to ~x1.8 improvement
+
+```text
+goos: darwin
+goarch: arm64
+pkg: github.com/darkbladecr/regexAlgoPerformance
+BenchmarkPrimeNumbers-10    	   18650	    639738 ns/op
+PASS
+ok  	github.com/darkbladecr/regexAlgoPerformance	18.766s
+```
+
+However, if we rewrite the line matching lookup we are looking at almost a ~x5 improvement:
+
+```text
+goos: darwin
+goarch: arm64
+pkg: github.com/darkbladecr/regexAlgoPerformance
+BenchmarkPrimeNumbers-10    	   52947	    226123 ns/op
+PASS
+ok  	github.com/darkbladecr/regexAlgoPerformance	14.417s
 ```

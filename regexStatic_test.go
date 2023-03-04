@@ -5,7 +5,8 @@ import (
 )
 
 func BenchmarkPrimeNumbers(b *testing.B) {
+	r := createRegex(conceptNameList)
 	for i := 0; i < b.N; i++ {
-		populate()
+		populate(r, md)
 	}
 }
